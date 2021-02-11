@@ -14,17 +14,76 @@ type Login struct {
 	Token    string `json:"token"`
 }
 
-type loginHandlers struct {
+//Response struct contains response data
+type Response struct {
+	Result      bool
+	Message     string
+	RedirectURL string
+}
+
+//LoginHandlers contains map for logins
+type LoginHandlers struct {
 	logins map[string]Login
 }
 
-func newLoginHandlers() *loginHandlers {
-	return &loginHandlers{
+func newLoginHandlers() *LoginHandlers {
+	return &LoginHandlers{
 		logins: map[string]Login{},
 	}
 }
 
-func (h *loginHandlers) post(w http.ResponseWriter, r *http.Request) {
+//Validate validates user credentials
+func validateCredentials(login Login) bool {
+
+	if login.Username == "c137@onecause.com" &&
+		login.Password == "#th@nH@rm#y#r!$100%D0p#" {
+		return true
+	}
+
+	return false
+}
+
+func validateRequest(w http.ResponseWriter, r *http.Request) bool {
+	method := r.Method
+	if method != "POST" {
+		w.WriteHeader(http.StatusForbidden)
+		w.Write([]byte(fmt.Sprintf("'%s' method not allowed.", method)))
+		return false
+	}
+
+	contentType := r.Header.Get("content-type")
+	if contentType != "application/json" {
+		w.WriteHeader(http.StatusUnsupportedMediaType)
+		w.Write([]byte(fmt.Sprintf("expected content-type 'application/json',	 got '%s'", contentType)))
+		return false
+	}
+
+	return true
+}
+
+func createResponse(valid bool) Response {
+	var response Response
+
+	if valid {
+		response.Result = true
+		response.Message = "Success"
+		response.RedirectURL = "http://onecause.com"
+	} else {
+		response.Result = false
+		response.Message = "bad username/password"
+		response.RedirectURL = ""
+	}
+
+	return response
+}
+
+func (h *LoginHandlers) post(w http.ResponseWriter, r *http.Request) {
+
+	if !validateRequest(w, r) {
+		return
+	}
+
+	//get body from request
 	bodyIn, err := ioutil.ReadAll(r.Body)
 	defer r.Body.Close()
 	if err != nil {
@@ -33,13 +92,7 @@ func (h *loginHandlers) post(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	contentType := r.Header.Get("content-type")
-	if contentType != "application/json" {
-		w.WriteHeader(http.StatusUnsupportedMediaType)
-		w.Write([]byte(fmt.Sprintf("expected content-type 'application/json',	 got '%s'", contentType)))
-		return
-	}
-
+	//create login object
 	var login Login
 	err = json.Unmarshal(bodyIn, &login)
 	if err != nil {
@@ -47,8 +100,24 @@ func (h *loginHandlers) post(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(err.Error()))
 	}
 
+	//validate credentials and create response using that result
+	responseObject := createResponse(validateCredentials(login))
+
+	//serialize response
+	response, err := json.Marshal(responseObject)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
+	}
 	//add/update login in logins map
 	h.logins[login.Username] = login
+
+	//write response
+	w.Header().Add("content-type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write(response)
+
+	//used for testing
 
 	// bodyOut, err := json.Marshal(login)
 	// if err != nil {
