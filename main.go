@@ -9,9 +9,8 @@ import (
 
 //Login struct contains user login data
 type Login struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
-	Token    string `json:"token"`
+	Hash  string `json:"Hash"`
+	Token string `json:"token"`
 }
 
 //Response struct contains response data
@@ -35,8 +34,7 @@ func newLoginHandlers() *LoginHandlers {
 //Validate validates user credentials
 func validateCredentials(login Login) bool {
 
-	if login.Username == "c137@onecause.com" &&
-		login.Password == "#th@nH@rm#y#r!$100%D0p#" {
+	if login.Hash == "EOCtK6aNq4iF67IjxyS3LIB3ymQb0/iP+T/ptOQaQX8=" {
 		return true
 	}
 
@@ -45,6 +43,11 @@ func validateCredentials(login Login) bool {
 
 func validateRequest(w http.ResponseWriter, r *http.Request) bool {
 	method := r.Method
+	if method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return false
+	}
+
 	if method != "POST" {
 		w.WriteHeader(http.StatusForbidden)
 		w.Write([]byte(fmt.Sprintf("'%s' method not allowed.", method)))
@@ -78,8 +81,13 @@ func createResponse(valid bool) Response {
 }
 
 func (h *LoginHandlers) post(w http.ResponseWriter, r *http.Request) {
+	header := w.Header()
+	header.Add("Access-Control-Allow-Origin", "*")
+	header.Add("Access-Control-Allow-Methods", "DELETE, POST, GET, OPTIONS")
+	header.Add("Access-Control-Allow-Headers", "Content-Type")
 
 	if !validateRequest(w, r) {
+		//w.WriteHeader(http.StatusForbidden)
 		return
 	}
 
@@ -110,7 +118,7 @@ func (h *LoginHandlers) post(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(err.Error()))
 	}
 	//add/update login in logins map
-	h.logins[login.Username] = login
+	h.logins[login.Hash] = login
 
 	//write response
 	w.Header().Add("content-type", "application/json")
@@ -133,7 +141,7 @@ func (h *LoginHandlers) post(w http.ResponseWriter, r *http.Request) {
 func main() {
 	loginHandlers := newLoginHandlers()
 	http.HandleFunc("/login", loginHandlers.post)
-	err := http.ListenAndServe(":8080", nil)
+	err := http.ListenAndServe(":8081", nil)
 	if err != nil {
 		panic(err)
 	}
