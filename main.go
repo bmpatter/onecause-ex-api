@@ -87,7 +87,6 @@ func (h *LoginHandlers) post(w http.ResponseWriter, r *http.Request) {
 	header.Add("Access-Control-Allow-Headers", "Content-Type")
 
 	if !validateRequest(w, r) {
-		//w.WriteHeader(http.StatusForbidden)
 		return
 	}
 
@@ -118,7 +117,9 @@ func (h *LoginHandlers) post(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(err.Error()))
 	}
 	//add/update login in logins map
-	h.logins[login.Hash] = login
+	if responseObject.Result {
+		h.logins[login.Hash] = login
+	}
 
 	//write response
 	w.Header().Add("content-type", "application/json")
