@@ -15,7 +15,7 @@ type Login struct {
 
 //Response struct contains response data
 type Response struct {
-	Result      bool
+	Success     bool
 	Message     string
 	RedirectURL string
 }
@@ -68,11 +68,11 @@ func createResponse(valid bool) Response {
 	var response Response
 
 	if valid {
-		response.Result = true
+		response.Success = true
 		response.Message = "Success"
 		response.RedirectURL = "http://onecause.com"
 	} else {
-		response.Result = false
+		response.Success = false
 		response.Message = "bad username/password"
 		response.RedirectURL = ""
 	}
@@ -117,7 +117,7 @@ func (h *LoginHandlers) post(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(err.Error()))
 	}
 	//add/update login in logins map
-	if responseObject.Result {
+	if responseObject.Success {
 		h.logins[login.Hash] = login
 	}
 
